@@ -10,24 +10,30 @@ class GraphDrawer:
         
         # Canvas
         self.canvas = tk.Canvas(root, bg="white", width=800, height=600)
-        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.canvas.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
         
         # Buttons
         self.control_frame = tk.Frame(root)
         self.control_frame.pack(side=tk.RIGHT, fill=tk.Y)
         
-        self.add_node_button = tk.Button(self.control_frame, text="Add Node", command=self.enable_add_node)
-        self.add_node_button.pack(pady=10)
+        self.add_node_button = tk.Button(self.control_frame, text="Add Node", command=self.enable_add_node, width=15)
+        self.add_node_button.pack(pady=5)
         
-        self.add_line_button = tk.Button(self.control_frame, text="Add Line", command=self.enable_add_line)
-        self.add_line_button.pack(pady=10)
+        self.add_line_button = tk.Button(self.control_frame, text="Add Line", command=self.enable_add_line, width=15)
+        self.add_line_button.pack(pady=5)
         
-        self.move_button = tk.Button(self.control_frame, text="Move", command=self.enable_move)
-        self.move_button.pack(pady=10)
+        self.move_button = tk.Button(self.control_frame, text="Move", command=self.enable_move, width=15)
+        self.move_button.pack(pady=5)
         
-        self.save_button = tk.Button(self.control_frame, text="Save Graph", command=self.save_graph)
-        self.save_button.pack(pady=10)
+        self.save_button = tk.Button(self.control_frame, text="Save Graph", command=self.save_graph, width=15)
+        self.save_button.pack(pady=5)
         
+        # Right-click menu
+        self.context_menu = tk.Menu(self.root, tearoff=0)
+        self.context_menu.add_command(label="Add Node", command=self.enable_add_node)
+        self.context_menu.add_command(label="Add Line", command=self.enable_add_line)
+        self.context_menu.add_command(label="Move", command=self.enable_move)
+
         # Graph Data
         self.nodes = {}  # node_id: (x, y)
         self.edges = []  # (node1_id, node2_id, weight)
@@ -42,21 +48,23 @@ class GraphDrawer:
         self.canvas.bind("<Button-1>", self.on_click)
         self.canvas.bind("<B1-Motion>", self.on_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_release)
+        self.canvas.bind("<Button-3>", self.show_context_menu)
     
     def enable_add_node(self):
         self.current_action = "add_node"
         self.selected_nodes.clear()
-        # messagebox.showinfo("Add Node", "Click on the canvas to add a node.")
     
     def enable_add_line(self):
         self.current_action = "add_line"
         self.selected_nodes.clear()
-        # messagebox.showinfo("Add Line", "Click on two nodes to connect them with a line.")
     
     def enable_move(self):
         self.current_action = "move"
         self.selected_nodes.clear()
-        # messagebox.showinfo("Move", "Drag nodes to move them.")
+    
+    def show_context_menu(self, event):
+        # Hiển thị menu chuột phải
+        self.context_menu.post(event.x_root, event.y_root)
     
     def on_click(self, event):
         if self.current_action == "add_node":
