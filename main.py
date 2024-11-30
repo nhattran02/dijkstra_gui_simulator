@@ -651,6 +651,7 @@ class GraphDrawer:
             messagebox.showerror("Save Graph", f"Failed to save graph: {e}")
 
     def open_graph(self):
+
         file_path = filedialog.askopenfilename(
             title="Open Graph",
             filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
@@ -658,7 +659,8 @@ class GraphDrawer:
 
         if not file_path:
             return
-
+        self.start_node = None 
+        self.end_node = None
         try:
             with open(file_path, 'r') as file:
                 graph_data = json.load(file)
