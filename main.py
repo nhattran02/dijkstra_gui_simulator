@@ -74,6 +74,17 @@ class GraphDrawer:
         self.Log.configure(selectforeground="black")
         self.Log.configure(wrap="word")
 
+        # Result Matrix Frame
+        self.resultMatrixFrame = tk.Frame(self.root)
+        self.resultMatrixFrame.place(relx=0.011, rely=0.786, relheight=0.207, relwidth=0.972)
+        self.resultMatrixFrame.configure(relief='groove')
+        self.resultMatrixFrame.configure(borderwidth="2")
+        self.resultMatrixFrame.configure(relief="groove")
+        self.resultMatrixFrame.configure(background="#ffffff")
+        self.resultMatrixFrame.configure(highlightbackground="#d9d9d9")
+        self.resultMatrixFrame.configure(highlightcolor="black")
+
+
         # Open Graph Button
         self.openGraphBtn = tk.Button(self.root)
         self.openGraphBtn.place(relx=0.022, rely=0.029, height=26, width=120)
@@ -134,8 +145,7 @@ class GraphDrawer:
 
         # Canvas Draw
         self.CanvasDraw = tk.Canvas(self.root)
-        self.CanvasDraw.place(relx=0.333, rely=0.017, relheight=0.7
-                , relwidth=0.656)
+        self.CanvasDraw.place(relx=0.333, rely=0.017, relheight=0.7, relwidth=0.656)
         self.CanvasDraw.configure(background="#ffffff")
         self.CanvasDraw.configure(borderwidth="2")
         self.CanvasDraw.configure(highlightbackground="#d9d9d9")
@@ -172,28 +182,48 @@ class GraphDrawer:
         self.runAllBtn.configure(text='''Run All''')
 
 
-        # ------------------------------------------
-        # Right Click Menu
-        self.context_menu = tk.Menu(self.root, tearoff=0)
-        self.context_menu.add_command(label="Add Node", command=self.enable_add_node)
-        self.context_menu.add_command(label="Add Line", command=self.enable_add_line)
-        self.context_menu.add_command(label="Move", command=self.enable_move)      
-
+        # -----------------------------------------    
         # Graph Data
         self.nodes = {}  # node_id: (x, y)
         self.edges = []  # (node1_id, node2_id, weight)
         self.node_count = 0
-        
+        self.start_node = None
+        self.end_node = None
+
         # Interaction State
         self.current_action = None
         self.selected_nodes = []
         self.moving_node = None
+
+        # Right Click Menu
+        self.context_menu = tk.Menu(self.root, tearoff=0)
+        self.context_menu.add_command(label="Add Node", command=self.enable_add_node)
+        self.context_menu.add_command(label="Add Line", command=self.enable_add_line)
+        self.context_menu.add_command(label="Move", command=self.enable_move)  
+        self.context_menu.add_separator()
+        self.context_menu.add_command(label="Set Start Node", command=self.enable_set_start_node)
+        self.context_menu.add_command(label="Set End Node", command=self.enable_set_end_node)        
 
         # Bindings
         self.CanvasDraw.bind("<Button-1>", self.on_click)
         self.CanvasDraw.bind("<B1-Motion>", self.on_drag)
         self.CanvasDraw.bind("<ButtonRelease-1>", self.on_release)
         self.CanvasDraw.bind("<Button-3>", self.show_context_menu)          
+
+    def enable_set_start_node(self):
+        self.current_action = "set_start_node"
+        self.Log.delete('1.0', tk.END)
+        self.Log.insert(tk.END, "Current Action: Set Start Node\n")           
+
+    def enable_set_end_node(self):
+        self.current_action = "set_end_node"
+        self.Log.delete('1.0', tk.END)
+        self.Log.insert(tk.END, "Current Action: Set End Node\n")           
+
+    def update_node_color(self, node_id, color):
+        if node_id in self.nodes:
+            x, y = self.nodes[node_id]
+            self.CanvasDraw.create_oval(x - 10, y - 10, x + 10, y + 10, fill=color, outline="black")                
 
     def update_matrix(self):
         num_nodes = len(self.nodes)
@@ -230,14 +260,22 @@ class GraphDrawer:
     def enable_add_node(self):
         self.current_action = "add_node"
         self.selected_nodes.clear()
+        self.Log.delete('1.0', tk.END)
+        self.Log.insert(tk.END, "Current Action: Add Node\n")        
+
     
     def enable_add_line(self):
         self.current_action = "add_line"
         self.selected_nodes.clear()
+        self.Log.delete('1.0', tk.END)
+        self.Log.insert(tk.END, "Current Action: Add Line\n")          
+
     
     def enable_move(self):
         self.current_action = "move"
         self.selected_nodes.clear()
+        self.Log.delete('1.0', tk.END)
+        self.Log.insert(tk.END, "Current Action: Move Node\n")           
     
     def show_context_menu(self, event):
         self.context_menu.post(event.x_root, event.y_root)
@@ -249,6 +287,10 @@ class GraphDrawer:
             self.select_node_for_line(event.x, event.y)
         elif self.current_action == "move":
             self.select_node_for_move(event.x, event.y)
+        elif self.current_action == "set_start_node":
+            self.select_start_node(event.x, event.y)
+        elif self.current_action == "set_end_node":
+            self.select_end_node(event.x, event.y)
     
     def on_drag(self, event):
         if self.current_action == "move" and self.moving_node:
@@ -261,16 +303,15 @@ class GraphDrawer:
         self.node_count += 1
         node_id = self.node_count
         self.nodes[node_id] = (x, y)
-        self.draw_node(node_id, x, y)
+        self.draw_node(node_id, x, y, text_color="black", bg_color="skyblue")
     
-    def draw_node(self, node_id, x, y):
+    def draw_node(self, node_id, x, y, text_color="black", bg_color="skyblue"):
         r = 20
         self.CanvasDraw.create_oval(
-            x - r, y - r, x + r, y + r,
-            fill="skyblue", tags=f"node_{node_id}"
+            x - r, y - r, x + r, y + r, fill=bg_color, tags=f"node_{node_id}"
         )
         self.CanvasDraw.create_text(
-            x, y, text=str(node_id), tags=f"node_{node_id}_text"
+            x, y, text=str(node_id), tags=f"node_{node_id}_text", fill=text_color
         )
     
     def select_node_for_line(self, x, y):
@@ -321,12 +362,33 @@ class GraphDrawer:
     def redraw_graph(self):
         # Redraw all nodes
         for node_id, (x, y) in self.nodes.items():
-            self.draw_node(node_id, x, y)
+            self.draw_node(node_id, x, y, text_color="black", bg_color="skyblue")
 
         # Redraw all edges
         for node1, node2, weight in self.edges:
             self.draw_edge(node1, node2, weight)
 
+    def select_start_node(self, x, y):
+        node_id = self.get_node_at_position(x, y)
+        if node_id:
+            self.start_node = node_id
+            self.CanvasDraw.delete("all")
+            self.redraw_graph()
+            if self.start_node:
+                self.draw_node(node_id, *self.nodes[self.start_node], text_color="white", bg_color="green")
+            if self.end_node:
+                self.draw_node(self.end_node, *self.nodes[self.end_node], text_color="white", bg_color="red")
+
+    def select_end_node(self, x, y):
+        node_id = self.get_node_at_position(x, y)
+        if node_id:
+            self.end_node = node_id
+            self.CanvasDraw.delete("all")
+            self.redraw_graph()
+            if self.end_node:
+                self.draw_node(node_id, *self.nodes[self.end_node], text_color="white", bg_color="red")
+            if self.start_node:
+                self.draw_node(self.start_node, *self.nodes[self.start_node], text_color="white", bg_color="green")
 
     def select_node_for_move(self, x, y):
         node_id = self.get_node_at_position(x, y)
@@ -337,7 +399,11 @@ class GraphDrawer:
         self.nodes[node_id] = (x, y)
         self.CanvasDraw.delete(f"node_{node_id}")
         self.CanvasDraw.delete(f"node_{node_id}_text")
-        self.draw_node(node_id, x, y)
+        self.draw_node(node_id, x, y, text_color="black", bg_color="skyblue")
+        if self.start_node and self.start_node == node_id:
+            self.draw_node(node_id, *self.nodes[self.start_node], text_color="white", bg_color="green")
+        if self.end_node and self.end_node == node_id:
+            self.draw_node(self.end_node, *self.nodes[self.end_node], text_color="white", bg_color="red")        
         self.update_edges(node_id)
     
     def update_edges(self, node_id):
