@@ -1,33 +1,81 @@
 import tkinter as tk
-from tkinter import simpledialog, messagebox
+from tkinter import simpledialog, messagebox, ttk
 import math
-
+import ctypes
 
 class GraphDrawer:
-    def __init__(self, root):
+    def __init__(self, root):    
+        root.geometry("900x700+325+37")
+        root.minsize(120, 1)
+        root.maxsize(1540, 845)
+        root.resizable(1,  1)
+        root.title("Dijkstra")
+        root.configure(background="#d9d9d9")
+        root.configure(highlightbackground="#d9d9d9")
+        root.configure(highlightcolor="black")
+
         self.root = root
         self.root.title("Graph Drawer")
         
+        self.root.geometry("900x700")
         # Canvas
-        self.canvas = tk.Canvas(root, bg="white", width=800, height=600)
-        self.canvas.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-        
+        self.canvas = tk.Canvas(root, bg="white", width=600, height=430)
+        self.canvas.pack(side=tk.RIGHT, fill=tk.X, expand=True, anchor='n')
+
+
         # Buttons
         self.control_frame = tk.Frame(root)
         self.control_frame.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.log_text = tk.Text(root, bg="lightgray", width=900, height=10)
+        self.log_text.pack(side=tk.BOTTOM, fill=tk.X, padx=300)
+        self.log_text.insert(tk.END, "Log:\n")
+
+        # self.add_node_button = tk.Button(self.control_frame, text="Add Node", command=self.enable_add_node, width=40)
+        # self.add_node_button.pack(pady=5)
         
-        self.add_node_button = tk.Button(self.control_frame, text="Add Node", command=self.enable_add_node, width=15)
-        self.add_node_button.pack(pady=5)
+        # self.add_line_button = tk.Button(self.control_frame, text="Add Line", command=self.enable_add_line, width=40)
+        # self.add_line_button.pack(pady=5)
         
-        self.add_line_button = tk.Button(self.control_frame, text="Add Line", command=self.enable_add_line, width=15)
-        self.add_line_button.pack(pady=5)
+        # self.move_button = tk.Button(self.control_frame, text="Move", command=self.enable_move, width=40)
+        # self.move_button.pack(pady=5)
         
-        self.move_button = tk.Button(self.control_frame, text="Move", command=self.enable_move, width=15)
-        self.move_button.pack(pady=5)
-        
-        self.save_button = tk.Button(self.control_frame, text="Save Graph", command=self.save_graph, width=15)
+        self.save_button = tk.Button(self.control_frame, text="Save Graph", command=self.save_graph, width=40)
         self.save_button.pack(pady=5)
+
+        self.update_button = tk.Button(self.control_frame, text="Update Matrix", command=self.update_matrix, width=40)
+        self.update_button.pack(pady=5)
         
+        # Matrix View
+        # self.matrix_view = ttk.Treeview(self.control_frame, show="headings", height=10)
+        # self.matrix_view.pack(pady=10, fill=tk.X)
+
+        # Matrix View with Scrollbars
+        self.matrix_frame = tk.Frame(self.control_frame, height=300)
+        self.matrix_frame.pack(pady=10, fill=tk.X)
+
+        # Horizontal scrollbar
+        self.h_scroll = tk.Scrollbar(self.matrix_frame, orient=tk.HORIZONTAL)
+        self.h_scroll.pack(side=tk.BOTTOM, fill=tk.X)
+
+        # Vertical scrollbar (optional, in case rows exceed display height)
+        self.v_scroll = tk.Scrollbar(self.matrix_frame, orient=tk.VERTICAL)
+        self.v_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.matrix_view = ttk.Treeview(
+            self.matrix_frame,
+            show="headings",
+            height=10,
+            xscrollcommand=self.h_scroll.set,
+            yscrollcommand=self.v_scroll.set
+        )
+        self.matrix_view.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Attach scrollbars to the Treeview
+        self.h_scroll.config(command=self.matrix_view.xview)
+        self.v_scroll.config(command=self.matrix_view.yview)
+
+
         # Right-click menu
         self.context_menu = tk.Menu(self.root, tearoff=0)
         self.context_menu.add_command(label="Add Node", command=self.enable_add_node)
@@ -50,6 +98,40 @@ class GraphDrawer:
         self.canvas.bind("<ButtonRelease-1>", self.on_release)
         self.canvas.bind("<Button-3>", self.show_context_menu)
     
+
+    def update_matrix(self):
+        print(self.nodes)
+        num_nodes = len(self.nodes)
+        if num_nodes == 0:
+            messagebox.showinfo("Update Matrix", "No nodes to update the matrix.")
+            return
+        
+        # Create adjacency matrix
+        matrix = [[float('inf')] * num_nodes for _ in range(num_nodes)]
+        for i in range(num_nodes):
+            matrix[i][i] = 0
+
+        for node1, node2, weight in self.edges:
+            matrix[node1 - 1][node2 - 1] = weight
+            matrix[node2 - 1][node1 - 1] = weight
+
+        for row in matrix:
+            print(row)
+            
+
+        self.matrix_view["columns"] = [str(i + 1) for i in range(num_nodes)]
+
+        # Set column headers and fixed widths
+        for i in range(num_nodes):
+            self.matrix_view.heading(str(i + 1), text=f"{i + 1}")
+            self.matrix_view.column(str(i + 1), width=40, anchor="center", stretch=False)
+
+        self.matrix_view.delete(*self.matrix_view.get_children())
+
+        for i, row in enumerate(matrix):
+            row_data = ["∞" if value == float('inf') else value for value in row]
+            self.matrix_view.insert("", "end", values=row_data)
+
     def enable_add_node(self):
         self.current_action = "add_node"
         self.selected_nodes.clear()
@@ -63,7 +145,6 @@ class GraphDrawer:
         self.selected_nodes.clear()
     
     def show_context_menu(self, event):
-        # Hiển thị menu chuột phải
         self.context_menu.post(event.x_root, event.y_root)
     
     def on_click(self, event):
